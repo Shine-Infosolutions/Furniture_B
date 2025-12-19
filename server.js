@@ -8,7 +8,12 @@ require('dotenv').config();
 const app = express();
 
 // Middleware
-app.use(cors({ credentials: true, origin: true }));
+app.use(cors({ 
+  credentials: true, 
+  origin: ['http://localhost:3000', 'http://localhost:5173', 'https://furniture-f-delta.vercel.app/'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 app.use(session({
   secret: process.env.SESSION_SECRET,
