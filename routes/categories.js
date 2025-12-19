@@ -8,26 +8,18 @@ const router = express.Router();
 // Get all categories with counts (public)
 router.get('/', async (req, res) => {
   try {
-    const categories = await Category.find().maxTimeMS(8000).lean();
+    const categories = await Category.find();
     
-    // Get counts efficiently with aggregation
-    const categoriesWithCounts = await Promise.all(
-      categories.map(async (category) => {
-        try {
-          const count = await Product.countDocuments({ category: category.name }).maxTimeMS(5000);
-          return { ...category, count };
-        } catch (err) {
-          return { ...category, count: 0 };
-        }
-      })
-    );
+    // Update counts from products
+    for (let category of categories) {
+      const count = await Product.countDocuments({ category: category.name });
+      category.count = count;
+      await category.save();
+    }
     
-    res.json(categoriesWithCounts);
+    res.json(categories);
   } catch (error) {
     console.error('Categories error:', error);
-    if (error.name === 'MongooseError' || error.message.includes('buffering timed out')) {
-      return res.status(503).json({ message: 'Database temporarily unavailable', error: 'Connection timeout' });
-    }
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

@@ -24,14 +24,9 @@ app.use(session({
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.static(path.join(__dirname)));
 
-// Health check endpoint
-app.get('/api/health', async (req, res) => {
-  try {
-    await mongoose.connection.db.admin().ping();
-    res.json({ status: 'OK', database: 'Connected' });
-  } catch (error) {
-    res.status(503).json({ status: 'Error', database: 'Disconnected', error: error.message });
-  }
+// Admin panel route
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin-panel.html'));
 });
 
 // Routes
@@ -41,7 +36,7 @@ app.use('/api/categories', require('./routes/categories'));
 app.use('/api/inquiries', require('./routes/inquiries'));
 app.use('/api/contact', require('./routes/contact'));
 
-// MongoDB connection with optimized settings
+// MongoDB connection
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.log('MongoDB connection error:', err));
