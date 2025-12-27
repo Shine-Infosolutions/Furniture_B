@@ -51,7 +51,7 @@ router.post('/', auth, upload.array('images', 4), async (req, res) => {
   try {
     const { name, description, price, originalPrice, category, discount, isNew, mainImageIndex } = req.body;
     
-    const images = req.files ? req.files.map(file => file.filename) : [];
+    const images = req.files ? req.files.map(file => file.path) : [];
     
     const product = new Product({
       name,
@@ -89,7 +89,7 @@ router.put('/:id', auth, upload.array('images', 4), async (req, res) => {
     };
 
     if (req.files && req.files.length > 0) {
-      updateData.images = req.files.map(file => file.filename);
+      updateData.images = req.files.map(file => file.path);
     }
 
     const product = await Product.findByIdAndUpdate(
