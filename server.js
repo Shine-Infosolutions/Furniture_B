@@ -9,7 +9,7 @@ const app = express();
 
 // Middleware
 app.use(cors({ 
-  origin: ['http://localhost:3000', 'http://localhost:5173', 'https://furniture-f-delta.vercel.app', 'https://furniture-b-pied.vercel.app'],
+  origin: ['http://localhost:5173', 'https://furniture-f-delta.vercel.app'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
