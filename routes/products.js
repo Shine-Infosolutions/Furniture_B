@@ -101,7 +101,7 @@ router.post('/', auth, upload.array('images', 4), async (req, res) => {
       originalPrice: originalPrice ? Number(originalPrice) : undefined,
       category,
       images,
-      mainImageIndex: mainImageIndex ? Number(mainImageIndex) : 0,
+      mainImageIndex: mainImageIndex !== undefined ? Number(mainImageIndex) : 0,
       discount: discount ? Number(discount) : 0,
       isNew: isNew === 'true'
     });
@@ -119,7 +119,7 @@ router.post('/', auth, upload.array('images', 4), async (req, res) => {
 // Update product (admin only)
 router.put('/:id', auth, upload.array('images', 4), async (req, res) => {
   try {
-    const { name, description, price, originalPrice, category, discount, isNew, mainImageIndex } = req.body;
+    const { name, description, price, originalPrice, category, discount, isNew, mainImageIndex, imageSlots } = req.body;
     
     const updateData = {
       name,
@@ -129,27 +129,40 @@ router.put('/:id', auth, upload.array('images', 4), async (req, res) => {
       category,
       discount: discount ? Number(discount) : 0,
       isNew: isNew === 'true',
-      mainImageIndex: mainImageIndex ? Number(mainImageIndex) : 0
+      mainImageIndex: mainImageIndex !== undefined ? Number(mainImageIndex) : 0
     };
 
-    if (req.files && req.files.length > 0) {
-      const images = [];
-      for (const file of req.files) {
-        const imageUrl = await uploadToCloudinary(file.buffer);
-        images.push(imageUrl);
-      }
-      updateData.images = images;
+    // Get existing product to preserve current images
+    const existingProduct = await Product.findById(req.params.id);
+    if (!existingProduct) {
+      return res.status(404).json({ message: 'Product not found' });
     }
+
+    // Start with existing images (ensure we have 4 slots)
+    let images = [...(existingProduct.images || [])];
+    while (images.length < 4) images.push(null);
+    
+    // Update only specific slots if new files are uploaded
+    if (req.files && req.files.length > 0) {
+      const slots = Array.isArray(imageSlots) ? imageSlots : [imageSlots];
+      
+      for (let i = 0; i < req.files.length; i++) {
+        const file = req.files[i];
+        const slotIndex = slots[i] ? Number(slots[i]) : i;
+        
+        const imageUrl = await uploadToCloudinary(file.buffer);
+        images[slotIndex] = imageUrl; // Update only the specific slot
+      }
+    }
+    
+    // Remove null values but keep array structure
+    updateData.images = images.filter(img => img !== null);
 
     const product = await Product.findByIdAndUpdate(
       req.params.id,
       updateData,
       { new: true }
     );
-
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
 
     res.json(product);
   } catch (error) {
