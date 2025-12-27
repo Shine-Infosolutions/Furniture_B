@@ -1,14 +1,8 @@
 const multer = require('multer');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('cloudinary').v2;
 
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'furniture-store',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp']
-  }
-});
+// Simple memory storage first, then upload to cloudinary manually
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage: storage,

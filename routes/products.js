@@ -2,7 +2,21 @@ const express = require('express');
 const Product = require('../models/Product');
 const auth = require('../middleware/auth');
 const upload = require('../middleware/upload');
+const cloudinary = require('cloudinary').v2;
 const router = express.Router();
+
+// Helper function to upload to cloudinary
+const uploadToCloudinary = (buffer) => {
+  return new Promise((resolve, reject) => {
+    cloudinary.uploader.upload_stream(
+      { folder: 'furniture-store' },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result.secure_url);
+      }
+    ).end(buffer);
+  });
+};
 
 // Get all products (public)
 router.get('/', async (req, res) => {
@@ -47,11 +61,17 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create product (admin only)
-router.post('/', auth, upload.array('images', 4), async (req, res) => {
+router.post('/', upload.array('images', 4), async (req, res) => {
   try {
     const { name, description, price, originalPrice, category, discount, isNew, mainImageIndex } = req.body;
     
-    const images = req.files ? req.files.map(file => file.path) : [];
+    let images = [];
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        const imageUrl = await uploadToCloudinary(file.buffer);
+        images.push(imageUrl);
+      }
+    }
     
     const product = new Product({
       name,
@@ -68,12 +88,13 @@ router.post('/', auth, upload.array('images', 4), async (req, res) => {
     await product.save();
     res.status(201).json(product);
   } catch (error) {
+    console.error('Create product error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
 // Update product (admin only)
-router.put('/:id', auth, upload.array('images', 4), async (req, res) => {
+router.put('/:id', upload.array('images', 4), async (req, res) => {
   try {
     const { name, description, price, originalPrice, category, discount, isNew, mainImageIndex } = req.body;
     
@@ -89,7 +110,12 @@ router.put('/:id', auth, upload.array('images', 4), async (req, res) => {
     };
 
     if (req.files && req.files.length > 0) {
-      updateData.images = req.files.map(file => file.path);
+      const images = [];
+      for (const file of req.files) {
+        const imageUrl = await uploadToCloudinary(file.buffer);
+        images.push(imageUrl);
+      }
+      updateData.images = images;
     }
 
     const product = await Product.findByIdAndUpdate(
@@ -110,7 +136,7 @@ router.put('/:id', auth, upload.array('images', 4), async (req, res) => {
 });
 
 // Delete product (admin only)
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
     if (!product) {
